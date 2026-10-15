@@ -86,7 +86,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadTheme();
     initPortfolio();
     await initStorageBackend();
+    await initCloudSync();
     await loadData();
+    await syncCloudOnAppStart();
     restoreLastTab();
     render();
     removeSplash();
@@ -97,6 +99,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     EventBus.on('dataImported', () => render());
     EventBus.on('dataReset', () => render());
+    EventBus.on('cloudStatusChanged', () => {
+      if (currentTab === 'pgHist') renderHistory();
+    });
 
     autoUpdateOnLoad();
   } catch (e) {
@@ -707,3 +712,4 @@ document.addEventListener('click', e => {
     case 'fab-toggle-list-edit': closeFAB(); if (currentTab === 'pgList') toggleEditMode(); break;
   }
 });
+
