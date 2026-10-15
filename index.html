@@ -1,0 +1,114 @@
+﻿<!DOCTYPE html>
+<!-- My Portfolio v5.43.0 | Soft Neutral UI -->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,viewport-fit=cover">
+  <meta name="theme-color" content="#F3FAFF">
+  <meta name="description" content="My Portfolio - 개인 자산 관리 대시보드">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self';
+    script-src 'self' https://cdn.jsdelivr.net;
+    style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+    font-src https://cdn.jsdelivr.net;
+    connect-src 'self' https://api.coingecko.com https://query1.finance.yahoo.com
+      https://m.stock.naver.com https://api.stock.naver.com https://stooq.com https://open.er-api.com
+      https://www.floatrates.com https://api.upbit.com https://api.bithumb.com
+      https://finance.daum.net
+      https://generativelanguage.googleapis.com
+      https://asset-manage-alpaca.wnsduf0306.workers.dev
+      https://api.allorigins.win https://api.codetabs.com
+      https://polling.finance.naver.com
+      https://ethereum-rpc.publicnode.com https://bsc-dataseed.binance.org
+      https://polygon-rpc.com https://arb1.arbitrum.io https://mainnet.optimism.io
+      https://api.avax.network;
+    img-src 'self' data:;">
+
+  <title>My Portfolio v5.43.0</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <!-- Pretendard Font -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous" defer></script>
+
+  <link rel="stylesheet" href="css/styles.css?v=p77">
+</head>
+<body data-theme="light">
+
+  <!-- Skip to content (a11y) -->
+  <a href="#main" class="skip-link">본문으로 건너뛰기</a>
+
+  <!-- Splash Screen -->
+  <div id="splash" class="splash" role="status" aria-label="앱 로딩 중">
+    <div class="splash-content">
+      <div class="splash-icon" aria-hidden="true">₩</div>
+      <div class="splash-text">My Portfolio</div>
+      <div class="spinner" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <!-- SW Update Banner -->
+  <div id="updateBanner" class="update-banner hidden" role="status" aria-live="polite">
+    <span class="update-banner-spinner" aria-hidden="true"></span>
+    <span id="updateBannerText">새 버전을 적용 중입니다. 잠시 후 자동으로 새로고침됩니다.</span>
+  </div>
+
+  <!-- Sidebar (desktop/tablet) -->
+  <aside id="sidebar" class="sidebar" aria-label="사이드바"></aside>
+
+  <!-- App Shell -->
+  <div id="app" class="app-layout">
+    <header id="appHeader" class="page-header" role="banner"></header>
+
+    <main id="main" class="main-content" role="main">
+      <div id="pgDash" class="page" role="tabpanel" aria-label="대시보드"></div>
+      <div id="pgList" class="page hidden" role="tabpanel" aria-label="자산 목록" aria-hidden="true"></div>
+      <div id="pgInc" class="page hidden" role="tabpanel" aria-label="가계부" aria-hidden="true"></div>
+      <div id="pgHist" class="page hidden" role="tabpanel" aria-label="기록 및 내보내기" aria-hidden="true"></div>
+      <div id="pgAi" class="page hidden" role="tabpanel" aria-label="분석" aria-hidden="true"></div>
+    </main>
+  </div>
+
+  <!-- Bottom Nav (mobile only) -->
+  <nav id="bottomNav" class="bottom-nav" role="tablist" aria-label="메인 탐색"></nav>
+
+  <!-- FAB (Floating Action Button) -->
+  <div id="fabBackdrop" class="fab-backdrop" data-action="close-fab"></div>
+  <div id="fabContainer" class="fab-container" aria-label="빠른 작업">
+    <div class="fab-menu" id="fabMenu" role="menu" aria-label="빠른 작업 메뉴"></div>
+    <button class="fab-btn" id="fabBtn" data-action="toggle-fab" aria-label="빠른 작업 열기" aria-expanded="false">+</button>
+  </div>
+
+  <!-- Modals -->
+  <div id="modalMain" class="modal" aria-hidden="true"></div>
+  <div id="modalSub" class="modal" aria-hidden="true"></div>
+  <div id="modalConfirm" class="modal" aria-hidden="true"></div>
+
+  <!-- Toast container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Scripts (load order matters) -->
+  <script src="js/config.js?v=p77" defer></script>
+  <script src="js/utils.js?v=p77" defer></script>
+  <script src="js/store.js?v=p77" defer></script>
+  <script src="js/api.js?v=p77" defer></script>
+  <script src="js/charts.js?v=p77" defer></script>
+  <script src="js/wallet.js?v=p77" defer></script>
+  <script src="js/ui-dashboard.js?v=p77" defer></script>
+  <script src="js/ui-list.js?v=p77" defer></script>
+  <script src="js/ui-modals.js?v=p77" defer></script>
+  <script src="js/ui-history.js?v=p77" defer></script>
+  <script src="js/ui-income.js?v=p77" defer></script>
+  <script src="js/ui-ai.js?v=p77" defer></script>
+  <script src="js/ui-report.js?v=p77" defer></script>
+  <script src="js/app.js?v=p77" defer></script>
+</body>
+</html>
+

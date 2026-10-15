@@ -1,0 +1,454 @@
+/* =============================================
+   My Portfolio v5.36.7 — Configuration
+   Soft Neutral palette, Cycle C (카테고리별 전일 대비 증감 배지)
+   ============================================= */
+
+const APP_VERSION = '5.36.7';
+const APP_NAME = 'My Portfolio';
+
+// ── Timing Constants ──
+const MODAL_ANIM_MS = 200;
+const TOAST_DURATION_MS = 2500;
+const TOAST_FADE_MS = 300;
+const DEBOUNCE_MS = 300;
+const SAVE_DEBOUNCE_MS = 2000;
+const SPLASH_FADE_MS = 400;
+const CACHE_TTL_RATE = 600_000;
+const CACHE_TTL_BENCH = 3_600_000;
+const API_TIMEOUT = 8000;
+const STOCK_DELAY_MS = 300;
+const RETRY_DELAY_MS = 2000;
+// stale 가격 감지 임계값: 이전 가격과 동일 + lpu가 이 시간 이상 지났으면 "값 미변화 의심"
+const STALE_DETECT_MS = 18 * 60 * 60 * 1000;
+const PDF_PRINT_DELAY_MS = 500;
+const PAGE_ENTER_MS = 400;
+const DYNAMIC_COLOR_DELAY_MS = 50;
+
+// ── Swipe Navigation ──
+const SWIPE_THRESHOLD_PX = 60;
+
+// ── Chart Rendering ──
+const CHART_POINT_THRESHOLD = 60;
+
+// ── Touch Drag Ghost Offset ──
+const TOUCH_GHOST_OFFSET = Object.freeze({ x: 30, y: 20 });
+
+// ── Analysis Thresholds ──
+const ANALYSIS_THRESHOLDS = Object.freeze({
+  safeLow: 10,
+  cryptoHigh: 30,
+  foreignLow: 20,
+  domesticHigh: 30,
+  domesticRisk: 80,
+  singleAssetMax: 50,
+  bigLoss: -30,
+});
+
+// ── Allocation Targets (배분 목표) ──
+const ALLOC_DRIFT_THRESHOLD_DEFAULT = 5;
+const DEFAULT_ALLOCATION_CATEGORIES = Object.freeze({
+  '국내주식': 0, '해외주식': 0, '코인': 0,
+  '현금': 0, '예적금': 0, '부동산': 0, '기타': 0,
+});
+
+// Lazy-render threshold
+const LAZY_RENDER_THRESHOLD = 20;
+const LAZY_RENDER_PAGE = 20;
+
+// History pagination
+const HISTORY_PAGE_SIZE = 50;
+const TXN_PAGE_SIZE = 50;
+
+// Preset sizes
+const PRESET_MAX = 10;
+
+// Focusable element selector (WCAG)
+const FOCUSABLE_SEL = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), a[href]';
+
+// Storage keys
+const STORAGE_KEY = 'myportfolio_v9';
+const META_KEY = 'mp_portfolio_meta';
+const THEME_KEY = 'mp_theme';
+const TAB_KEY = 'mp_last_tab';
+const RATE_KEY = 'mp_ex_rate';
+const WALLET_KEY = 'wl_addr';
+const CUSTOM_PROXY_KEY = 'mp_custom_proxy';
+const DASH_PREFS_KEY = 'mp_dash_prefs';
+const PRESETS_KEY = 'mp_presets';
+const AUTO_BACKUP_KEY = 'mp_autobackup';
+const GEMINI_API_KEY_KEY = 'mp_gemini_api_key';
+const IDB_DB_NAME = 'myportfolio_db';
+const IDB_DB_VERSION = 1;
+const IDB_STORE_NAME = 'kv';
+const IDB_DATA_MODE_KEY = 'mp_storage_backend';
+const IDB_MIGRATED_AT_KEY = 'mp_idb_migrated_at';
+
+// Limits
+const LIMITS = Object.freeze({
+  assets: 500,
+  txns: 5000,
+  history: 3650,
+  portfolios: 10,
+  storage: 4_500_000,
+  upload: 10_485_760,
+  logs: 200,
+  autoBackup: 30,
+  autoBackupBytes: 2_000_000,
+  usdtHistory: 10,
+});
+
+// Fallback values
+const FALLBACK_USD_KRW = 1350;
+
+// Asset categories — Soft Neutral palette (v5.0.0)
+const CATEGORIES = Object.freeze([
+  { id: '국내주식', icon: '🇰🇷', color: '#0057E7', label: '국내주식' },
+  { id: '해외주식', icon: '🌍', color: '#008BE8', label: '해외주식' },
+  { id: '코인',     icon: '₿',  color: '#A99BEF', label: '코인' },
+  { id: '현금',     icon: '💵', color: '#ED85AC', label: '현금' },
+  { id: '예적금',   icon: '🏦', color: '#42B9F5', label: '예적금' },
+  { id: '부동산',   icon: '🏠', color: '#003FA8', label: '부동산' },
+  { id: '기타',     icon: '📦', color: '#8BAFC6', label: '기타' },
+]);
+const CAT_MAP = Object.freeze(Object.fromEntries(CATEGORIES.map(c => [c.id, c])));
+const CAT_IDS = Object.freeze(CATEGORIES.map(c => c.id));
+const INVESTMENT_CATS = Object.freeze(['국내주식', '해외주식', '코인']);
+const STOCK_CATS = Object.freeze(['국내주식', '해외주식']);
+
+// 자산별 일일 델타 배지 활성 카테고리. 데이터는 항상 수집(store.js byAsset)되므로
+// 나중에 현금/예적금/부동산 등을 표시하려면 이 배열에 카테고리명만 추가하면 됨.
+// 현금 카테고리는 기본적으로 제외되지만, asset.isUsdt === true 자산은 예외적으로 표시됨.
+const ASSET_DELTA_ENABLED_CATS = Object.freeze(['국내주식', '해외주식', '코인']);
+
+// USDT location presets (exchange/wallet/domestic — DeFi removed in v5.5.0)
+const USDT_LOCATIONS = Object.freeze({
+  overseas: {
+    label: '해외 CEX',
+    icon: '🌐',
+    items: ['Binance', 'BYBIT', 'Bitget', 'Gate.io', 'Flipster', 'OKX'],
+  },
+  wallet: {
+    label: '지갑',
+    icon: '👛',
+    items: ['OKX wallet', 'Rabby wallet'],
+  },
+  domestic: {
+    label: '국내 CEX',
+    icon: '🇰🇷',
+    items: ['빗썸', '업비트', '코빗', '코인원', '고팍스'],
+  },
+});
+
+// Income categories
+const INCOME_CATS = Object.freeze([
+  { id: 'salary',   label: '급여',       icon: '💰' },
+  { id: 'bonus',    label: '상여금',     icon: '🎁' },
+  { id: 'side',     label: '부업',       icon: '💼' },
+  { id: 'invest',   label: '투자수익',   icon: '📈' },
+  { id: 'rental',   label: '임대수입',   icon: '🏠' },
+  { id: 'interest', label: '이자/배당',  icon: '🏦' },
+  { id: 'other',    label: '기타',       icon: '📦' },
+]);
+const INCOME_MAP = Object.freeze(Object.fromEntries(INCOME_CATS.map(c => [c.id, c])));
+
+// Expense categories
+const EXPENSE_CATS = Object.freeze([
+  { id: 'food',      label: '식비',       icon: '🍽️' },
+  { id: 'cafe',      label: '카페/간식',  icon: '☕' },
+  { id: 'transport', label: '교통/차량',  icon: '🚗' },
+  { id: 'housing',   label: '주거/통신',  icon: '🏠' },
+  { id: 'life',      label: '생활용품',   icon: '🧺' },
+  { id: 'shopping',  label: '쇼핑',       icon: '🛍️' },
+  { id: 'health',    label: '의료/건강',  icon: '💊' },
+  { id: 'family',    label: '가족/경조',  icon: '👨‍👩‍👧' },
+  { id: 'tax',       label: '세금/보험',  icon: '🧾' },
+  { id: 'travel',    label: '여행/문화',  icon: '✈️' },
+  { id: 'other',     label: '기타',       icon: '📦' },
+]);
+const EXPENSE_MAP = Object.freeze(Object.fromEntries(EXPENSE_CATS.map(c => [c.id, c])));
+
+// Savings and transfers (kept separate from both income and spending)
+const SAVING_CATS = Object.freeze([
+  { id: 'deposit',    label: '예적금',     icon: '🏦' },
+  { id: 'investment', label: '투자',       icon: '📈' },
+  { id: 'retirement', label: '연금·노후',  icon: '🌱' },
+  { id: 'purpose',    label: '목적저축',   icon: '🎯' },
+  { id: 'transfer',   label: '자산이동',   icon: '↔️' },
+  { id: 'other',      label: '기타',       icon: '📦' },
+]);
+const SAVING_MAP = Object.freeze(Object.fromEntries(SAVING_CATS.map(c => [c.id, c])));
+
+// CoinGecko ID mapping
+const COIN_IDS = Object.freeze({
+  BTC:'bitcoin', ETH:'ethereum', SOL:'solana', XRP:'ripple',
+  BNB:'binancecoin', HYPE:'hyperliquid',
+  DOGE:'dogecoin', ADA:'cardano', AVAX:'avalanche-2', DOT:'polkadot',
+  MATIC:'matic-network', LINK:'chainlink', UNI:'uniswap', ATOM:'cosmos',
+  FIL:'filecoin', APT:'aptos', ARB:'arbitrum', OP:'optimism',
+  SUI:'sui', SEI:'sei-network', TIA:'celestia', INJ:'injective-protocol',
+  NEAR:'near', STX:'blockstack', AAVE:'aave', ENA:'ethena',
+  PEPE:'pepe', SHIB:'shiba-inu', WIF:'dogwifcoin', BONK:'bonk',
+  FLOKI:'floki', ONDO:'ondo-finance', RENDER:'render-token',
+  FET:'fetch-ai', TAO:'bittensor', SAND:'the-sandbox',
+  MANA:'decentraland', AXS:'axie-infinity', IMX:'immutable-x',
+  GALA:'gala', HBAR:'hedera-hashgraph', ALGO:'algorand',
+  VET:'vechain', EOS:'eos', XLM:'stellar', TRX:'tron',
+  TON:'the-open-network', USDT:'tether', USDC:'usd-coin',
+});
+const COIN_SYM = Object.freeze(
+  Object.fromEntries(Object.entries(COIN_IDS).map(([s, id]) => [id, s]))
+);
+
+// KRX ETF name prefixes
+const ETF_PREFIXES = Object.freeze([
+  'KODEX','TIGER','KBSTAR','SOL','ARIRANG','HANARO','KOSEF','ACE','TIMEFOLIO','PLUS'
+]);
+
+// Stock sector inference rules. Order matters: more specific thematic ETFs should
+// match before broad ETF/index rules.
+const STOCK_SECTOR_RULES = Object.freeze([
+  {
+    id: 'semiconductor', label: '반도체', color: '#0057E7',
+    tickers: ['NVDA','AMD','TSM','ASML','AVGO','MU','QCOM','AMAT','LRCX','KLAC','INTC','ARM','ON','SOXX','SMH','005930','000660','058470','036930','039030','084370','042700'],
+    keywords: ['반도체','소부장','hbm','chip','칩','파운드리','삼성전자','하이닉스','nvidia','엔비디아','마이크론','퀄컴'],
+  },
+  {
+    id: 'shipbuilding', label: '조선', color: '#4BA9D8',
+    tickers: ['009540','010140','042660','329180','010620','097230','082740'],
+    keywords: ['조선','선박','조선해양','한화오션','한국조선','현대중공업','현대미포','삼성중공업','shipbuilding','shipyard'],
+  },
+  {
+    id: 'defense', label: '방산', color: '#145F9B',
+    tickers: ['LMT','RTX','NOC','GD','HII','BA','064350','012450','047810','079550','272210','003490'],
+    keywords: ['방산','방위','국방','군수','항공우주','우주항공','현대로템','한화에어로스페이스','한국항공우주','한화시스템','lig넥스원','kai','aerospace','defense','missile','미사일','무기'],
+  },
+  {
+    id: 'auto_mobility', label: '자동차/모빌리티', color: '#1E7FC0',
+    tickers: ['TSLA','GM','F','TM','RIVN','LCID','005380','000270','012330','011210'],
+    keywords: ['자동차','모빌리티','전기차','tesla','테슬라','현대차','기아','rivian','lucid'],
+  },
+  {
+    id: 'battery_ev', label: '2차전지/소재', color: '#75C9EF',
+    tickers: ['373220','051910','006400','096770','247540','066970','086520','003670','361610','278280'],
+    keywords: ['2차전지','배터리','양극재','음극재','전해액','리튬','에코프로','포스코퓨처엠','lg에너지솔루션','battery','lithium'],
+  },
+  {
+    id: 'software_ai', label: '빅테크/AI·소프트웨어', color: '#2D93D1',
+    tickers: ['AAPL','MSFT','GOOGL','GOOG','META','AMZN','PLTR','CRM','NOW','ADBE','ORCL','SNOW','DDOG','NET'],
+    keywords: ['빅테크','big tech','ai','인공지능','소프트웨어','클라우드','saas','플랫폼','데이터센터','애플','apple','마이크로소프트','구글','메타','아마존','팔란티어'],
+  },
+  {
+    id: 'bio_health', label: '바이오/헬스케어', color: '#8172D8',
+    tickers: ['JNJ','LLY','NVO','PFE','MRK','UNH','ABBV','TMO','ISRG','207940','068270','128940','145020'],
+    keywords: ['바이오','헬스','제약','의료','셀트리온','삼성바이오','유한양행','health','pharma','biotech'],
+  },
+  {
+    id: 'finance', label: '금융', color: '#5DB5E1',
+    tickers: ['JPM','BAC','WFC','GS','MS','V','MA','AXP','BRK.B','BRK-B','105560','055550','086790','316140','024110'],
+    keywords: ['금융','은행','증권','보험','카드','kb금융','신한지주','하나금융','bank','visa','mastercard'],
+  },
+  {
+    id: 'internet_content', label: '인터넷/콘텐츠', color: '#0C76B7',
+    tickers: ['NFLX','DIS','SPOT','RBLX','EA','035420','035720','251270','259960','352820','041510'],
+    keywords: ['인터넷','콘텐츠','엔터','게임','웹툰','네이버','카카오','하이브','크래프톤','netflix','disney','gaming'],
+  },
+  {
+    id: 'food_beverage', label: '음식료', color: '#ED85AC',
+    tickers: ['003230','004370','271560','097950','007310','280360','005610'],
+    keywords: ['음식료','식품','라면','불닭','삼양식품','농심','오리온','cj제일제당','오뚜기','빙그레','spc삼립','food','beverage'],
+  },
+  {
+    id: 'beauty_cosmetics', label: '뷰티/화장품', color: '#67BDE8',
+    tickers: ['278470','090430','051900','192820','161890','018290','214420'],
+    keywords: ['뷰티','화장품','미용','에이피알','apr','메디큐브','에이지알','아모레','lg생활건강','코스맥스','한국콜마','애경산업','cosmetics','beauty'],
+  },
+  {
+    id: 'home_living', label: '가구/리빙', color: '#387FAF',
+    tickers: ['003800','079430','122900'],
+    keywords: ['가구','리빙','침대','매트리스','인테리어','에이스침대','현대리바트','한샘','furniture','living'],
+  },
+  {
+    id: 'energy_chem', label: '에너지/화학', color: '#8BAFC6',
+    tickers: ['XOM','CVX','COP','BP','SHEL','OXY','010950','009830','078930','011170'],
+    keywords: ['에너지','정유','화학','석유','가스','태양광','수소','energy','oil','gas','chemical'],
+  },
+  {
+    id: 'consumer', label: '소비재/브랜드', color: '#F29CBD',
+    tickers: ['COST','MCD','SBUX','KO','PEP','NKE','PG','LVMUY','UL','005930'],
+    keywords: ['소비재','브랜드','리테일','코카콜라','나이키','costco','starbucks','consumer'],
+  },
+  {
+    id: 'industrial', label: '산업재/인프라', color: '#A99BEF',
+    tickers: ['GE','CAT','DE','HON','MMM','UNP','000720','028260','034020','010120'],
+    keywords: ['산업재','건설','인프라','기계','중공업','물류','건설기계','infrastructure','industrial'],
+  },
+  {
+    id: 'telecom', label: '통신', color: '#7298B1',
+    tickers: ['T','VZ','TMUS','017670','030200','032640'],
+    keywords: ['통신','텔레콤','5g','sk텔레콤','kt','lg유플러스','telecom'],
+  },
+  {
+    id: 'broad_etf', label: 'ETF/지수', color: '#557F9C',
+    tickers: ['SPY','VOO','IVV','VTI','QQQ','DIA','IWM','SCHD','JEPI','TQQQ','SQQQ'],
+    keywords: ['s&p','sp500','나스닥','nasdaq','다우','dow','지수','인덱스','etf','kodex','tiger','kbstar','arirang','hanaro','kosef','ace','timefolio','plus'],
+  },
+  {
+    id: 'other_stock', label: '기타 주식', color: '#8BAFC6',
+    tickers: [],
+    keywords: [],
+  },
+]);
+const STOCK_SECTOR_MAP = Object.freeze(Object.fromEntries(STOCK_SECTOR_RULES.map(s => [s.id, s])));
+
+// EVM chains
+const EVM_CHAINS = Object.freeze([
+  { id:'ethereum',  name:'Ethereum',        sym:'ETH',  rpc:'https://ethereum-rpc.publicnode.com',   coinId:'ethereum' },
+  { id:'bsc',       name:'BNB Smart Chain',  sym:'BNB',  rpc:'https://bsc-dataseed.binance.org',      coinId:'binancecoin' },
+  { id:'polygon',   name:'Polygon',         sym:'POL',  rpc:'https://polygon-rpc.com',               coinId:'matic-network' },
+  { id:'arbitrum',  name:'Arbitrum',        sym:'ETH',  rpc:'https://arb1.arbitrum.io/rpc',          coinId:'ethereum' },
+  { id:'optimism',  name:'Optimism',        sym:'ETH',  rpc:'https://mainnet.optimism.io',           coinId:'ethereum' },
+  { id:'avalanche', name:'Avalanche',       sym:'AVAX', rpc:'https://api.avax.network/ext/bc/C/rpc', coinId:'avalanche-2' },
+]);
+
+// ERC-20 tokens
+const EVM_TOKENS = Object.freeze([
+  { symbol:'USDT', coinId:'tether', decimals:6, addr:{
+    ethereum:'0xdAC17F958D2ee523a2206206994597C13D831ec7', bsc:'0x55d398326f99059fF775485246999027B3197955',
+    polygon:'0xc2132D05D31c914a87C6611C10748AEb04B58e8F', arbitrum:'0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+    optimism:'0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', avalanche:'0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7',
+  }},
+  { symbol:'USDC', coinId:'usd-coin', decimals:6, addr:{
+    ethereum:'0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', bsc:'0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
+    polygon:'0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', arbitrum:'0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    optimism:'0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85', avalanche:'0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
+  }},
+  { symbol:'DAI', coinId:'dai', decimals:18, addr:{
+    ethereum:'0x6B175474E89094C44Da98b954EedeAC495271d0F', polygon:'0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063',
+    arbitrum:'0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1', optimism:'0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1',
+  }},
+  { symbol:'WBTC', coinId:'wrapped-bitcoin', decimals:8, addr:{
+    ethereum:'0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', polygon:'0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6',
+    arbitrum:'0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f',
+  }},
+  { symbol:'LINK', coinId:'chainlink', decimals:18, addr:{
+    ethereum:'0x514910771AF9Ca656af840dff83E8264EcF986CA', bsc:'0xF8A0BF9cF54Bb92F17374d9e9A321E6a111a51bD',
+    polygon:'0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39', arbitrum:'0xf97f4df75117a78c1A5a0DBb814Af92458539FB4',
+    avalanche:'0x5947BB275c521040051D82396192181b413227A3',
+  }},
+  { symbol:'UNI', coinId:'uniswap', decimals:18, addr:{
+    ethereum:'0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', polygon:'0xb33EaAd8d922B1083446DC23f610c2567fB5180f',
+    arbitrum:'0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0', optimism:'0x6fd9d7AD17242c41f7131d257212c54A0e816691',
+  }},
+  { symbol:'AAVE', coinId:'aave', decimals:18, addr:{
+    ethereum:'0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', polygon:'0xD6DF932A45C0f255f85145f286eA0b292B21C90B',
+    avalanche:'0x63a72806098Bd3D9520cC43356dD78afe5D386D9',
+  }},
+]);
+
+// CORS proxies
+// ── My Proxy (Cloudflare Worker) ──
+const MY_PROXY_URL = 'https://asset-manage-alpaca.wnsduf0306.workers.dev';
+
+// Public proxies — fallback only
+const CORS_PROXIES = [
+  u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+];
+
+// API endpoints
+const API = Object.freeze({
+  coingecko:     'https://api.coingecko.com/api/v3',
+  yahoo:         'https://query1.finance.yahoo.com',
+  naver:         'https://m.stock.naver.com/api/stock',
+  naverPolling:  'https://polling.finance.naver.com/api/realtime/domestic/stock',
+  naverWorld:    'https://api.stock.naver.com/stock',
+  stooq:         'https://stooq.com/q/l/',
+  openER:        'https://open.er-api.com/v6/latest/USD',
+  floatRates:    'https://www.floatrates.com/daily/usd.json',
+  upbit:         'https://api.upbit.com/v1/ticker',
+  bithumb:       'https://api.bithumb.com/public/ticker',
+  daum:          'https://finance.daum.net/api/exchanges',
+  gemini:        'https://generativelanguage.googleapis.com/v1beta',
+});
+const GEMINI_MODEL = 'gemini-3.5-flash';
+
+// Benchmark indices
+const BENCHMARKS = Object.freeze({ kospi: '^KS11', sp500: '^GSPC' });
+
+// ── Simple Event Bus ──
+const EventBus = {
+  _handlers: {},
+  on(event, fn) {
+    (this._handlers[event] = this._handlers[event] || []).push(fn);
+  },
+  off(event, fn) {
+    if (!this._handlers[event]) return;
+    this._handlers[event] = this._handlers[event].filter(h => h !== fn);
+  },
+  once(event, fn) {
+    const wrapper = (data) => { this.off(event, wrapper); fn(data); };
+    this.on(event, wrapper);
+  },
+  emit(event, data) {
+    (this._handlers[event] || []).forEach(fn => {
+      try { fn(data); } catch (e) { console.error(`EventBus [${event}]:`, e); }
+    });
+  },
+};
+
+// ── Centralized UI State ──
+const UIState = {
+  listCategoryOpen: {},
+  listCategoryShown: {},
+  dashboardCategoryOpen: {},
+  stockSectorOpen: {},
+  dashboardTrendDays: 30,
+  dashboardEditMode: false,
+  isEditMode: false,
+  goalEditMode: false,
+  allocationEditMode: false,
+  listSearchQuery: '',
+  listFilter: 'all',
+  historyTab: 'records',
+  historyFilter: 30,
+  historyShown: HISTORY_PAGE_SIZE,
+  txnSearch: '',
+  txnFilterPeriod: 0,
+  txnFilterType: 'all',
+  txnFilterCat: 'all',
+  txnSort: 'date-desc',
+  txnShown: TXN_PAGE_SIZE,
+  bookFilter: 'all',
+  bookSearch: '',
+  bookSearchScope: 'month',
+  pointLedgerView: 'month',
+  incomeMonth: (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  })(),
+
+  reset() {
+    this.listCategoryOpen = {};
+    this.listCategoryShown = {};
+    this.dashboardCategoryOpen = {};
+    this.stockSectorOpen = {};
+    this.dashboardTrendDays = 30;
+    this.dashboardEditMode = false;
+    this.isEditMode = false;
+    this.allocationEditMode = false;
+    this.listSearchQuery = '';
+    this.listFilter = 'all';
+    this.historyTab = 'records';
+    this.historyFilter = 30;
+    this.historyShown = HISTORY_PAGE_SIZE;
+    this.txnSearch = '';
+    this.txnFilterPeriod = 0;
+    this.txnFilterType = 'all';
+    this.txnFilterCat = 'all';
+    this.txnSort = 'date-desc';
+    this.txnShown = TXN_PAGE_SIZE;
+    this.bookFilter = 'all';
+    this.bookSearch = '';
+    this.bookSearchScope = 'month';
+    this.pointLedgerView = 'month';
+  },
+};

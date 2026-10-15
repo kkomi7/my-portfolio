@@ -1,0 +1,709 @@
+/* =============================================
+   My Portfolio v5.36.7 — App Entry Point
+   Cycle C compatible
+   Soft Neutral: sidebar/header/FAB/theme-reactive charts
+   ============================================= */
+
+let currentTab = 'pgDash';
+let _prevTabIdx = 0;
+let _swipeStartX = 0;
+let _swipeStartY = 0;
+const TAB_ORDER = ['pgDash', 'pgList', 'pgInc', 'pgHist', 'pgAi'];
+const TAB_ICONS = [
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>',
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h16v11H4zM7 4h10v3.5H7z"/><path d="M15.5 12h4.5v3h-4.5z"/></svg>',
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2.2-1.4-1.9 1.4-1.9-1.4-1.9 1.4-1.9-1.4L6 20.5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>',
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V10M12 19V5M19 19v-7"/><path d="M3.5 19.5h17"/></svg>',
+];
+const TAB_LABELS = ['대시보드', '자산', '가계부', '기록', '분석'];
+const NAV_ICON_KEY = 'mp_nav_icon_overrides';
+
+function getNavIconOverrides() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(NAV_ICON_KEY) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_) { return {}; }
+}
+
+function getTabIcon(index) {
+  const tabId = TAB_ORDER[index];
+  const overrides = getNavIconOverrides();
+  if (!Object.prototype.hasOwnProperty.call(overrides, tabId)) return TAB_ICONS[index];
+  return overrides[tabId] ? `<span class="nav-custom-icon">${escHtml(overrides[tabId])}</span>` : '';
+}
+
+function openNavIconManager() {
+  const overrides = getNavIconOverrides();
+  const container = $('#modalSub');
+  container.innerHTML = `<div class="modal-backdrop"></div><div class="modal-box modal-box-sm"><div class="modal-header"><h3>메뉴 아이콘 설정</h3><button class="modal-close" data-action="close-sub-modal" aria-label="닫기">✕</button></div><div class="modal-body">
+    <p class="nav-icon-manager-help">원하는 이모티콘이나 기호를 적으세요. 비워 두면 지금의 선 아이콘, <b>없음</b>이라고 적으면 아이콘을 숨겨요.</p>
+    <div class="nav-icon-manager-list">${TAB_ORDER.map((tabId, index) => {
+      const hasOverride = Object.prototype.hasOwnProperty.call(overrides, tabId);
+      const value = hasOverride ? (overrides[tabId] || '없음') : '';
+      return `<label><span>${TAB_LABELS[index]}</span><input type="text" class="nav-icon-input" data-tab="${tabId}" value="${escAttr(value)}" placeholder="기본 선 아이콘" maxlength="8"></label>`;
+    }).join('')}</div>
+    <div class="modal-actions"><button class="btn-s" data-action="reset-nav-icons">기본으로</button><button class="btn-p" data-action="save-nav-icons">저장</button></div></div></div>`;
+  openModal('modalSub');
+  _setupModalSubDelegation(container, action => {
+    if (action === 'reset-nav-icons') {
+      localStorage.removeItem(NAV_ICON_KEY);
+      closeModal('modalSub'); renderSidebar(); renderBottomNav(); showToast('기본 선 아이콘으로 되돌렸어요', 'success');
+    } else if (action === 'save-nav-icons') {
+      const next = {};
+      $$('.nav-icon-input', container).forEach(input => {
+        const value = stripHtml(input.value.trim(), 8);
+        if (value === '없음') next[input.dataset.tab] = '';
+        else if (value) next[input.dataset.tab] = value;
+      });
+      localStorage.setItem(NAV_ICON_KEY, JSON.stringify(next));
+      closeModal('modalSub'); renderSidebar(); renderBottomNav(); showToast('메뉴 아이콘을 바꿨어요', 'success');
+    }
+  });
+}
+
+// FAB menu items
+const FAB_ITEMS = [
+  { icon: '📋', label: '자산 추가', action: 'fab-add-asset' },
+  { icon: '🧾', label: '가계부 입력', action: 'fab-add-income' },
+];
+
+function getFABItems() {
+  const items = [...FAB_ITEMS];
+  if (currentTab === 'pgList' && UIState.listFilter !== 'sold') {
+    items.push({
+      icon: UIState.isEditMode ? '✓' : '✎',
+      label: UIState.isEditMode ? '편집 완료' : '자산 편집',
+      action: 'fab-toggle-list-edit',
+    });
+  }
+  return items;
+}
+
+// ── Initialization ──
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    loadTheme();
+    initPortfolio();
+    await initStorageBackend();
+    await loadData();
+    restoreLastTab();
+    render();
+    removeSplash();
+    registerSW();
+
+    fetchMarketRatesOnLoad();
+    setupSwipe();
+
+    EventBus.on('dataImported', () => render());
+    EventBus.on('dataReset', () => render());
+
+    autoUpdateOnLoad();
+  } catch (e) {
+    console.error('App initialization failed:', e);
+    const splash = document.getElementById('splash');
+    if (splash) splash.remove();
+    const appEl = document.getElementById('app');
+    if (appEl) {
+      appEl.innerHTML = `
+        <div style="padding:40px 20px;text-align:center;color:#EF4444">
+          <h2>초기화 오류</h2>
+          <p>앱을 시작할 수 없습니다. 브라우저 콘솔을 확인하세요.</p>
+          <p style="font-size:12px;color:#94A3B8;margin-top:8px">${escHtml(String(e.message || e))}</p>
+        </div>
+      `;
+    }
+  }
+});
+
+// ── Background auto-update on app load ──
+const AUTO_UPDATE_DEDUP_MS = 5 * 60 * 1000;
+
+async function autoUpdateOnLoad() {
+  try {
+    const lastMs = Number(localStorage.getItem('lastAutoUpdateMs')) || 0;
+    if (lastMs && (Date.now() - lastMs) < AUTO_UPDATE_DEDUP_MS) return;
+
+    const summary = await autoUpdateAll(null, { silent: true });
+    if (!summary || summary.skipped || summary.total === 0) return;
+
+    localStorage.setItem('lastAutoUpdateMs', String(Date.now()));
+    render();
+    if (summary.stale > 0) {
+      showToast(`⚠️ 값 미변화 의심 ${summary.stale}건`, 'info');
+    }
+  } catch (e) {
+    console.warn('Background auto-update failed:', e.message);
+  }
+}
+
+async function fetchMarketRatesOnLoad() {
+  try {
+    await Promise.allSettled([fetchExchangeRate(), fetchUsdtRate()]);
+    if (currentTab === 'pgDash') renderDashboard();
+    renderPageHeader();
+  } catch (e) {
+    console.warn('Initial market rate fetch failed:', e.message);
+  }
+}
+
+// ── Service Worker with Update Banner ──
+let _didReloadForSWUpdate = false;
+
+function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateBanner('새 버전을 적용 중입니다. 잠시 후 자동으로 새로고침됩니다.');
+        }
+      });
+    });
+  }).catch(e => {
+    console.warn('Service worker registration failed:', e.message);
+  });
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (_didReloadForSWUpdate) return;
+    _didReloadForSWUpdate = true;
+    showUpdateBanner('새 버전 적용이 완료되었습니다. 페이지를 새로고침합니다.');
+    setTimeout(() => location.reload(), 700);
+  });
+}
+
+function showUpdateBanner(message) {
+  const banner = $('#updateBanner');
+  if (!banner) return;
+  const text = $('#updateBannerText');
+  if (text && message) text.textContent = message;
+  banner.classList.remove('hidden');
+  banner.classList.add('visible');
+}
+
+// ── Theme ──
+// 저장된 사용자 토글이 있으면 그 값, 없으면 OS의 prefers-color-scheme 사용
+function getSystemTheme() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function getThemeMode() {
+  const stored = localStorage.getItem(THEME_KEY);
+  return stored === 'dark' || stored === 'light' ? stored : 'auto';
+}
+
+function getEffectiveTheme(mode = getThemeMode()) {
+  return mode === 'auto' ? getSystemTheme() : mode;
+}
+
+function getThemeModeMeta(mode = getThemeMode()) {
+  const effective = getEffectiveTheme(mode);
+  return effective === 'dark'
+    ? { mode, effective, icon: '☾', label: '다크 모드', next: '라이트 모드' }
+    : { mode, effective, icon: '☀︎', label: '라이트 모드', next: '다크 모드' };
+}
+
+function loadTheme() {
+  const theme = getEffectiveTheme();
+  document.body.dataset.theme = theme;
+  updateThemeMeta(theme);
+  setupSystemThemeWatcher();
+}
+
+// 사용자가 수동 토글한 적 없을 때만 OS 변경에 반응
+function setupSystemThemeWatcher() {
+  if (!window.matchMedia) return;
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  const handler = (e) => {
+    if (localStorage.getItem(THEME_KEY)) return;
+    applyTheme(e.matches ? 'dark' : 'light');
+  };
+  if (mq.addEventListener) mq.addEventListener('change', handler);
+  else if (mq.addListener) mq.addListener(handler);
+}
+
+// 테마를 실제로 화면에 적용 + 차트/사이드바/헤더 재렌더
+function applyTheme(theme) {
+  document.body.dataset.theme = theme;
+  updateThemeMeta(theme);
+  destroyAllCharts();
+  if (typeof _dashRenderKey !== 'undefined') _dashRenderKey = '';
+  updateThemeModeButtons();
+  renderPageHeader();
+  requestAnimationFrame(() => {
+    renderTabContent();
+  });
+}
+
+function toggleTheme() {
+  const current = document.body.dataset.theme || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  setThemeMode(next);
+}
+
+// "OS 자동"으로 되돌리기: localStorage 키 삭제 후 현재 OS 테마 적용
+function setThemeAuto() {
+  setThemeMode('auto');
+}
+
+function isThemeAuto() {
+  return getThemeMode() === 'auto';
+}
+
+function setThemeMode(mode) {
+  if (mode === 'auto') localStorage.removeItem(THEME_KEY);
+  else localStorage.setItem(THEME_KEY, mode === 'dark' ? 'dark' : 'light');
+  applyTheme(getEffectiveTheme(mode));
+}
+
+function cycleThemeMode() {
+  const next = getEffectiveTheme() === 'dark' ? 'light' : 'dark';
+  setThemeMode(next);
+}
+
+function updateThemeModeButtons() {
+  const meta = getThemeModeMeta();
+  const sidebarBtn = $('#sidebarThemeModeBtn');
+  if (sidebarBtn) {
+    sidebarBtn.classList.toggle('active', meta.mode === 'auto');
+    sidebarBtn.setAttribute('aria-label', `테마: ${meta.label}. 클릭하면 ${meta.next}`);
+    sidebarBtn.setAttribute('aria-pressed', meta.mode === 'auto' ? 'true' : 'false');
+    const icon = sidebarBtn.querySelector('.sidebar-action-icon');
+    const label = sidebarBtn.querySelector('span:not(.sidebar-action-icon)');
+    if (icon) icon.textContent = meta.icon;
+    if (label) label.textContent = meta.label;
+  }
+  const headerBtn = $('#headerThemeBtn');
+  if (headerBtn) {
+    headerBtn.textContent = meta.icon;
+    headerBtn.setAttribute('aria-label', `테마: ${meta.label}. 클릭하면 ${meta.next}`);
+    headerBtn.setAttribute('title', `테마: ${meta.label} → ${meta.next}`);
+  }
+}
+
+function updateThemeMeta(theme) {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = theme === 'dark' ? '#061A2C' : '#0057E7';
+}
+
+// ── Tab Routing (Directional Transitions) ──
+function goTab(tabId) {
+  if (!TAB_ORDER.includes(tabId)) return;
+  const newIdx = TAB_ORDER.indexOf(tabId);
+  const oldIdx = TAB_ORDER.indexOf(currentTab);
+
+  currentTab = tabId;
+  _prevTabIdx = oldIdx;
+  localStorage.setItem(TAB_KEY, tabId);
+  destroyAllCharts();
+  renderTabContent(newIdx > oldIdx ? 'forward' : 'backward');
+  syncNav();
+  renderPageHeader();
+  renderFAB();
+
+  requestAnimationFrame(() => {
+    const page = $(`#${currentTab}`);
+    if (page) page.focus({ preventScroll: true });
+  });
+}
+
+function restoreLastTab() {
+  const saved = localStorage.getItem(TAB_KEY);
+  if (saved && TAB_ORDER.includes(saved)) currentTab = saved;
+  _prevTabIdx = TAB_ORDER.indexOf(currentTab);
+}
+
+function render() {
+  renderSidebar();
+  renderPageHeader();
+  renderTabContent();
+  renderBottomNav();
+  renderFAB();
+  syncNav();
+}
+
+// ── Sidebar (Desktop/Tablet) ──
+function renderSidebar() {
+  const sidebar = $('#sidebar');
+  if (!sidebar) return;
+  const meta = loadPortfolioMeta();
+  const pf = meta.list.find(p => p.id === activePortfolioId);
+  const themeMeta = getThemeModeMeta();
+
+  sidebar.innerHTML = `
+    <div class="sidebar-brand">
+      <button class="sidebar-brand-row sidebar-brand-home" data-action="go-home" aria-label="대시보드 홈으로 이동">
+        <img class="sidebar-icon" src="icon.svg" alt="" width="36" height="36">
+        <div class="sidebar-brand-text">
+          <div class="sidebar-logo">${escHtml(APP_NAME)}</div>
+          <div class="sidebar-version">v${APP_VERSION}</div>
+        </div>
+      </button>
+      ${meta.list.length > 0 ? `
+        <div class="sidebar-pf" data-action="open-portfolio-manager"
+          role="button" tabindex="0" aria-label="포트폴리오 전환: ${escAttr(pf?.name || '기본')}">
+          <span class="sidebar-pf-icon">📂</span>
+          <span>${escHtml(pf?.name || '기본 포트폴리오')}</span>
+          ${meta.list.length > 1 ? '<span class="sidebar-pf-arrow" aria-hidden="true">▾</span>' : ''}
+        </div>
+      ` : ''}
+    </div>
+
+    <nav class="sidebar-nav" role="tablist" aria-orientation="vertical" aria-label="메인 탐색">
+      ${TAB_ORDER.map((id, i) => `
+        <div class="nav-item ${currentTab === id ? 'active' : ''}"
+          data-action="go-tab" data-tab="${id}"
+          role="tab" tabindex="${currentTab === id ? '0' : '-1'}"
+          aria-selected="${currentTab === id}" aria-controls="${id}" aria-label="${TAB_LABELS[i]}">
+          <span class="nav-item-icon">${getTabIcon(i)}</span>
+          <span class="nav-item-label">${TAB_LABELS[i]}</span>
+        </div>
+      `).join('')}
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-action" data-action="open-monthly-report" role="button" tabindex="0" aria-label="월간 리포트">
+        <span class="sidebar-action-icon">📊</span><span>월간 리포트</span>
+      </div>
+      <button type="button" class="sidebar-action" data-action="open-nav-icon-manager" aria-label="메뉴 아이콘 설정">
+        <span class="sidebar-action-icon">✦</span><span>메뉴 아이콘</span>
+      </button>
+      <div class="sidebar-action" data-action="open-auto-backup-manager" role="button" tabindex="0" aria-label="자동 백업 관리">
+        <span class="sidebar-action-icon">🗂</span><span>자동 백업</span>
+      </div>
+      <div class="sidebar-action ${themeMeta.mode === 'auto' ? 'active' : ''}" id="sidebarThemeModeBtn" data-action="cycle-theme"
+        role="button" tabindex="0" aria-pressed="${themeMeta.mode === 'auto' ? 'true' : 'false'}"
+        aria-label="테마: ${escAttr(themeMeta.label)}. 클릭하면 ${escAttr(themeMeta.next)}">
+        <span class="sidebar-action-icon">${themeMeta.icon}</span><span>${escHtml(themeMeta.label)}</span>
+      </div>
+    </div>
+  `;
+
+  sidebar.onclick = (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    const action = target.dataset.action;
+    if (action === 'go-home') goTab('pgDash');
+    else if (action === 'go-tab') goTab(target.dataset.tab);
+    else if (action === 'open-portfolio-manager') openPortfolioManager();
+    else if (action === 'open-monthly-report') openMonthlyReport();
+    else if (action === 'open-nav-icon-manager') openNavIconManager();
+    else if (action === 'open-auto-backup-manager') openAutoBackupManager();
+    else if (action === 'cycle-theme') cycleThemeMode();
+  };
+
+  sidebar.onkeydown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      const target = e.target.closest('[data-action]');
+      if (target) { e.preventDefault(); target.click(); }
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const items = $$('.nav-item', sidebar);
+      const current = items.findIndex(i => i.dataset.tab === currentTab);
+      if (current < 0) return;
+      e.preventDefault();
+      const next = e.key === 'ArrowDown'
+        ? (current + 1) % items.length
+        : (current - 1 + items.length) % items.length;
+      goTab(items[next].dataset.tab);
+      requestAnimationFrame(() => items[next].focus());
+    }
+  };
+}
+
+// ── Page Header (contextual) ──
+function renderPageHeader() {
+  const header = $('#appHeader');
+  if (!header) return;
+  const idx = TAB_ORDER.indexOf(currentTab);
+  const meta = loadPortfolioMeta();
+  const pf = meta.list.find(p => p.id === activePortfolioId);
+
+  header.innerHTML = `
+    <div class="page-header-title">
+      <span class="page-title">${TAB_LABELS[idx] || '대시보드'}</span>
+      <span class="page-subtitle">${escHtml(pf?.name || APP_NAME)}</span>
+    </div>
+    <div class="header-actions">
+      ${currentTab === 'pgDash' ? `
+        <button class="btn-p" id="btnAutoUpdateHeader" data-action="auto-update"
+          aria-label="전체 가격 업데이트" ${autoUpdateProgress.running ? 'disabled' : ''}>
+          ${autoUpdateProgress.running ? '업데이트 중...' : '🔄 전체 업데이트'}
+        </button>
+      ` : ''}
+      ${currentTab === 'pgList' ? `
+        <button class="btn-s" data-action="auto-update" aria-label="자산 시세 새로고침" ${autoUpdateProgress.running ? 'disabled' : ''}>
+          ${autoUpdateProgress.running ? '업데이트 중...' : '시세 새로고침'}
+        </button>
+        <button class="btn-p" data-action="open-add-asset" aria-label="자산 추가">+ 자산 추가</button>
+      ` : ''}
+      ${currentTab === 'pgInc' ? `
+        <button class="btn-p" data-action="open-add-income" aria-label="가계부 내역 추가">+ 내역 추가</button>
+      ` : ''}
+    </div>
+  `;
+
+  header.onclick = (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    const action = target.dataset.action;
+    if (action === 'auto-update') startAutoUpdate();
+    else if (action === 'open-add-asset') openAddAsset();
+    else if (action === 'open-add-income') openAddIncome();
+  };
+}
+
+// 헤더 테마 버튼: 짧게 탭 → 토글, 길게(600ms) → OS 자동
+function setupThemeLongPress(btn) {
+  if (!btn) return;
+  const LONG_MS = 600;
+  let timer = null;
+  let triggered = false;
+
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+
+  btn.addEventListener('pointerdown', (e) => {
+    triggered = false;
+    cancel();
+    timer = setTimeout(() => {
+      triggered = true;
+      timer = null;
+      setThemeAuto();
+      if (typeof showToast === 'function') showToast('🖥️ OS 자동 테마로 전환', 'info');
+    }, LONG_MS);
+  });
+  btn.addEventListener('pointerup', cancel);
+  btn.addEventListener('pointercancel', cancel);
+  btn.addEventListener('pointerleave', cancel);
+
+  // long press가 발동했으면 그 후의 click(toggle)을 무시
+  btn.addEventListener('click', (e) => {
+    if (triggered) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      triggered = false;
+    }
+  }, true);
+
+  // iOS Safari 길게 누르기 시 컨텍스트 메뉴/텍스트 선택 방지
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
+// ── Tab Content (Directional Slide) ──
+function renderTabContent(direction) {
+  TAB_ORDER.forEach(id => {
+    const page = $(`#${id}`);
+    if (page) {
+      page.classList.add('hidden');
+      page.classList.remove('visible', 'page-enter', 'page-enter-reverse');
+      page.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  const page = $(`#${currentTab}`);
+  if (page) {
+    page.classList.remove('hidden');
+    page.classList.add('visible');
+    page.removeAttribute('aria-hidden');
+
+    if (direction) {
+      const animClass = direction === 'forward' ? 'page-enter' : 'page-enter-reverse';
+      page.classList.add(animClass);
+      requestAnimationFrame(() => {
+        setTimeout(() => page.classList.remove(animClass), PAGE_ENTER_MS);
+      });
+    }
+  }
+
+  switch (currentTab) {
+    case 'pgDash': renderDashboard(); break;
+    case 'pgList': renderList(); break;
+    case 'pgInc': renderIncome(); break;
+    case 'pgHist': renderHistory(); break;
+    case 'pgAi': renderAnalysis(); break;
+  }
+
+  setTimeout(applyDynamicColors, DYNAMIC_COLOR_DELAY_MS);
+}
+
+// ── Bottom Nav (mobile) ──
+function renderBottomNav() {
+  const nav = $('#bottomNav');
+  if (!nav) return;
+  nav.innerHTML = TAB_ORDER.map((id, i) => `
+    <button class="nav-btn ${currentTab === id ? 'active' : ''}"
+      data-action="go-tab" data-tab="${id}"
+      role="tab" aria-selected="${currentTab === id}"
+      aria-controls="${id}" aria-label="${TAB_LABELS[i]}"
+      tabindex="${currentTab === id ? '0' : '-1'}">
+      <span class="nav-icon" aria-hidden="true">${getTabIcon(i)}</span>
+      <span class="nav-label">${TAB_LABELS[i]}</span>
+    </button>
+  `).join('');
+
+  nav.onclick = (e) => {
+    const target = e.target.closest('[data-action="go-tab"]');
+    if (!target) return;
+    goTab(target.dataset.tab);
+  };
+
+  nav.onkeydown = (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const btns = $$('.nav-btn', nav);
+    const currentIdx = btns.findIndex(b => b.dataset.tab === currentTab);
+    if (currentIdx < 0) return;
+    e.preventDefault();
+    const nextIdx = e.key === 'ArrowRight'
+      ? (currentIdx + 1) % btns.length
+      : (currentIdx - 1 + btns.length) % btns.length;
+    goTab(btns[nextIdx].dataset.tab);
+    requestAnimationFrame(() => {
+      const newBtn = $(`[data-tab="${btns[nextIdx].dataset.tab}"]`, nav);
+      if (newBtn) newBtn.focus();
+    });
+  };
+}
+
+// ── FAB (Floating Action Button) ──
+function renderFAB() {
+  const menu = $('#fabMenu');
+  const btn = $('#fabBtn');
+  if (!menu || !btn) return;
+  const directLabel = currentTab === 'pgInc' ? '가계부 내역 추가' : currentTab === 'pgList' ? '자산 추가' : '빠른 작업 열기';
+  btn.setAttribute('aria-label', directLabel);
+  btn.setAttribute('title', directLabel);
+  const items = currentTab === 'pgInc' || currentTab === 'pgList' ? [] : getFABItems();
+  menu.innerHTML = items.map(item => `
+    <button class="fab-menu-item" data-action="${item.action}" role="menuitem" aria-label="${item.label}">
+      <span aria-hidden="true">${item.icon}</span>
+      ${item.label}
+    </button>
+  `).join('');
+}
+
+function toggleFAB() {
+  if (currentTab === 'pgInc') {
+    closeFAB();
+    openAddIncome();
+    return;
+  }
+  if (currentTab === 'pgList') {
+    closeFAB();
+    openAddAsset();
+    return;
+  }
+  const container = $('#fabContainer');
+  const btn = $('#fabBtn');
+  const backdrop = $('#fabBackdrop');
+  if (!container || !btn) return;
+  const isOpen = container.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  btn.setAttribute('aria-expanded', String(isOpen));
+  if (backdrop) backdrop.style.display = isOpen ? 'block' : 'none';
+}
+
+function closeFAB() {
+  const container = $('#fabContainer');
+  const btn = $('#fabBtn');
+  const backdrop = $('#fabBackdrop');
+  if (!container || !btn) return;
+  container.classList.remove('open');
+  btn.classList.remove('open');
+  btn.setAttribute('aria-expanded', 'false');
+  if (backdrop) backdrop.style.display = 'none';
+}
+
+function syncNav() {
+  $$('.sidebar .nav-item').forEach(item => {
+    const isActive = item.dataset.tab === currentTab;
+    item.classList.toggle('active', isActive);
+    item.setAttribute('aria-selected', String(isActive));
+    item.setAttribute('tabindex', isActive ? '0' : '-1');
+  });
+  $$('.bottom-nav .nav-btn').forEach(btn => {
+    const isActive = btn.dataset.tab === currentTab;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', String(isActive));
+    btn.setAttribute('tabindex', isActive ? '0' : '-1');
+  });
+}
+
+// ── Dynamic color application ──
+function applyDynamicColors() {
+  $$('.legend-dot[data-color]').forEach(dot => {
+    dot.style.background = dot.dataset.color;
+  });
+  $$('.score-circle[data-border-color]').forEach(circle => {
+    circle.style.borderColor = circle.dataset.borderColor;
+  });
+}
+
+// ── Swipe Navigation (mobile) ──
+function setupSwipe() {
+  document.addEventListener('touchstart', e => {
+    _swipeStartX = e.touches[0].clientX;
+    _swipeStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    // v4.4.1: 드래그-리오더 진행 중이면 탭 전환 무시
+    if (window.__dragInProgress) return;
+    const dx = e.changedTouches[0].clientX - _swipeStartX;
+    const dy = e.changedTouches[0].clientY - _swipeStartY;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    if (e.target.closest('input, select, textarea, .drag-handle, canvas, .modal.active')) return;
+    // Belt-and-suspenders: 목록 탭 편집 모드에선 가로 스와이프 무시
+    if (UIState.isEditMode && currentTab === 'pgList') return;
+
+    const idx = TAB_ORDER.indexOf(currentTab);
+    if (dx > 0 && idx > 0) goTab(TAB_ORDER[idx - 1]);
+    else if (dx < 0 && idx < TAB_ORDER.length - 1) goTab(TAB_ORDER[idx + 1]);
+  }, { passive: true });
+}
+
+// ── Splash Screen ──
+function removeSplash() {
+  const splash = $('#splash');
+  if (splash) {
+    splash.style.opacity = '0';
+    setTimeout(() => splash.remove(), SPLASH_FADE_MS);
+  }
+}
+
+// ── Keyboard Shortcuts ──
+document.addEventListener('keydown', e => {
+  const active = document.activeElement;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
+
+  if (e.key >= '1' && e.key <= '5' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    e.preventDefault();
+    goTab(TAB_ORDER[Number(e.key) - 1]);
+  }
+
+  if (e.key === 't' && e.altKey && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    cycleThemeMode();
+  }
+
+  if (e.key === 'Escape') {
+    closeFAB();
+  }
+});
+
+// ── Global Event Delegation ──
+document.addEventListener('click', e => {
+  const target = e.target.closest('[data-action]');
+  if (!target) return;
+  const action = target.dataset.action;
+
+  switch (action) {
+    case 'toggle-fab': toggleFAB(); break;
+    case 'close-fab': closeFAB(); break;
+    case 'fab-add-asset': closeFAB(); openAddAsset(); break;
+    case 'fab-add-income': closeFAB(); openAddIncome(); break;
+    case 'fab-toggle-list-edit': closeFAB(); if (currentTab === 'pgList') toggleEditMode(); break;
+  }
+});

@@ -1,0 +1,164 @@
+﻿/* Service Worker - My Portfolio v5.36.7
+   Feature: stale 가격 감지 (사일런트 실패 방지)
+   Soft Neutral UI overhaul (lavender/cream/coral) */
+
+var CACHE_NAME = "myportfolio-v5.43.0-pocari-77";
+
+var STATIC_ASSETS = [
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./icon.svg",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./css/styles.css",
+  "./js/config.js",
+  "./js/utils.js",
+  "./js/store.js",
+  "./js/api.js",
+  "./js/charts.js",
+  "./js/wallet.js",
+  "./js/ui-dashboard.js",
+  "./js/ui-list.js",
+  "./js/ui-modals.js",
+  "./js/ui-history.js",
+  "./js/ui-income.js",
+  "./js/ui-ai.js",
+  "./js/ui-report.js",
+  "./js/app.js"
+];
+
+// 네트워크-우선 + 캐시 폴백 대상. Cloudflare Worker 프록시와 polling.finance.naver.com이
+// 빠져있어 가격 응답이 영구 캐싱되던 회귀(v5.9.3 이후)를 v5.11.1에서 수정.
+var API_HOSTS = [
+  "api.coingecko.com", "query1.finance.yahoo.com",
+  "m.stock.naver.com", "api.stock.naver.com",
+  "polling.finance.naver.com",
+  "asset-manage-alpaca.wnsduf0306.workers.dev",
+  "stooq.com",
+  "open.er-api.com", "www.floatrates.com",
+  "api.upbit.com", "api.bithumb.com", "finance.daum.net",
+  "generativelanguage.googleapis.com",
+  "ethereum-rpc.publicnode.com", "bsc-dataseed.binance.org",
+  "polygon-rpc.com", "arb1.arbitrum.io",
+  "mainnet.optimism.io", "api.avax.network"
+];
+
+var CDN_HOSTS = ["cdn.jsdelivr.net"];
+
+var OFFLINE_HTML = '<!DOCTYPE html>'
+  + '<html lang="ko"><head><meta charset="UTF-8">'
+  + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+  + '<title>오프라인 - My Portfolio</title>'
+  + '<style>'
+  + 'body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;'
+  + 'background:#061A2C;color:#F4FAFF;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'
+  + 'text-align:center;padding:20px;box-sizing:border-box;}'
+  + '.offline-box{max-width:400px;}'
+  + '.offline-icon{font-size:64px;margin-bottom:16px;}'
+  + 'h1{font-size:20px;margin:0 0 12px;}'
+  + 'p{font-size:14px;color:#82A8C1;margin:0 0 24px;line-height:1.6;}'
+  + 'button{background:#0057E7;color:#fff;border:none;padding:12px 24px;border-radius:8px;'
+  + 'font-size:14px;cursor:pointer;}'
+  + 'button:hover{background:#0046C7;}'
+  + '</style></head><body>'
+  + '<div class="offline-box">'
+  + '<div class="offline-icon" aria-hidden="true">📡</div>'
+  + '<h1>인터넷에 연결할 수 없습니다</h1>'
+  + '<p>네트워크 연결을 확인한 후 다시 시도해 주세요.<br>'
+  + '이전에 캐시된 데이터가 있다면 자동으로 복원됩니다.</p>'
+  + '<button onclick="location.reload()">다시 시도</button>'
+  + '</div></body></html>';
+
+// Install: pre-cache static assets
+self.addEventListener("install", function(e) {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(function(cache) {
+      return cache.addAll(STATIC_ASSETS);
+    })
+  );
+  self.skipWaiting();
+});
+
+// Activate: clean old caches
+self.addEventListener("activate", function(e) {
+  e.waitUntil(
+    caches.keys().then(function(keys) {
+      return Promise.all(
+        keys.filter(function(k) { return k !== CACHE_NAME; })
+            .map(function(k) { return caches.delete(k); })
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+// Message: keep manual activation support for older open tabs
+self.addEventListener("message", function(e) {
+  if (e.data && e.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
+// Fetch: strategy based on request type
+self.addEventListener("fetch", function(e) {
+  var url;
+  try { url = new URL(e.request.url); } catch (_) { return; }
+
+  if (e.request.method !== "GET") return;
+
+  // API requests: network-first with cache fallback
+  if (API_HOSTS.some(function(h) { return url.hostname.includes(h); })) {
+    e.respondWith(
+      fetch(e.request).then(function(resp) {
+        if (resp.ok) {
+          var clone = resp.clone();
+          caches.open(CACHE_NAME).then(function(cache) { cache.put(e.request, clone); });
+        }
+        return resp;
+      }).catch(function() {
+        return caches.match(e.request);
+      })
+    );
+    return;
+  }
+
+  // CDN: stale-while-revalidate
+  if (CDN_HOSTS.some(function(h) { return url.hostname.includes(h); })) {
+    e.respondWith(
+      caches.match(e.request).then(function(cached) {
+        var fetchPromise = fetch(e.request).then(function(resp) {
+          if (resp.ok) {
+            var clone = resp.clone();
+            caches.open(CACHE_NAME).then(function(cache) { cache.put(e.request, clone); });
+          }
+          return resp;
+        }).catch(function() { return cached; });
+        return cached || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Local: cache-first with network fallback + offline page for navigation
+  e.respondWith(
+    caches.match(e.request).then(function(cached) {
+      return cached || fetch(e.request).then(function(resp) {
+        if (resp.ok) {
+          var clone = resp.clone();
+          caches.open(CACHE_NAME).then(function(cache) { cache.put(e.request, clone); });
+        }
+        return resp;
+      }).catch(function() {
+        if (e.request.mode === "navigate") {
+          return new Response(OFFLINE_HTML, {
+            status: 503,
+            statusText: "Service Unavailable",
+            headers: { "Content-Type": "text/html; charset=UTF-8" }
+          });
+        }
+      });
+    })
+  );
+});
+
