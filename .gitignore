@@ -1,0 +1,26 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+config.local.js
+
+# Personal finance data and exports
+data/
+backups/
+exports/
+MyPortfolio_backup_*.json
+*.db
+*.sqlite
+*.sqlite3
+
+# Local tool and OS files
+.claude/settings.local.json
+.DS_Store
+Thumbs.db
+
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+*.log
