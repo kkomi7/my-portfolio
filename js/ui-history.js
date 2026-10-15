@@ -65,6 +65,8 @@ function renderHistory() {
       </div>
     </div>
 
+    ${typeof renderCloudSyncCard === 'function' ? renderCloudSyncCard() : ''}
+
     <div class="hist-tabs" role="tablist" aria-label="기록 탭">
       <button class="hist-tab ${UIState.historyTab === 'records' ? 'active' : ''}" role="tab"
         aria-selected="${UIState.historyTab === 'records' ? 'true' : 'false'}"
@@ -283,6 +285,7 @@ function _setupHistoryDelegation(container) {
     else if (action === 'import-csv') doImportCSV();
     else if (action === 'export-pdf') doExportPDF();
     else if (action === 'reset-all') doResetAll();
+    else if (action === 'open-cloud-sync') openCloudSyncModal();
     else if (action === 'history-filter') setHistoryFilter(Number(target.dataset.days));
     else if (action === 'delete-history') confirmDeleteHistory(target.dataset.date);
     else if (action === 'load-more-history') loadMoreHistory();
@@ -975,3 +978,4 @@ function downloadBlob(blob, filename) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
