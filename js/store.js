@@ -274,6 +274,7 @@ function _doSave() {
         });
       EventBus.emit('dataSaved');
       tryAutoBackup('daily');
+      if (typeof queueCloudSync === 'function') queueCloudSync();
       return true;
     }
     if (json.length > LIMITS.storage) {
@@ -284,6 +285,7 @@ function _doSave() {
     _invalidateStorageCache();
     EventBus.emit('dataSaved');
     tryAutoBackup('daily');
+    if (typeof queueCloudSync === 'function') queueCloudSync();
     return true;
   } catch (e) {
     console.error('Failed to save data:', e);
@@ -1314,3 +1316,4 @@ function resetAllData(options = {}) {
   if (!options.skipSave) saveDataNow();
   EventBus.emit('dataReset');
 }
+
