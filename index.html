@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!-- My Portfolio v5.43.0 | Soft Neutral UI -->
 <html lang="ko">
 <head>
@@ -21,7 +21,7 @@
       https://polling.finance.naver.com
       https://ethereum-rpc.publicnode.com https://bsc-dataseed.binance.org
       https://polygon-rpc.com https://arb1.arbitrum.io https://mainnet.optimism.io
-      https://api.avax.network;
+      https://api.avax.network https://*.supabase.co wss://*.supabase.co;
     img-src 'self' data:;">
 
   <title>My Portfolio v5.43.0</title>
@@ -37,8 +37,9 @@
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous" defer></script>
 
-  <link rel="stylesheet" href="css/styles.css?v=p77">
+  <link rel="stylesheet" href="css/styles.css?v=p78">
 </head>
 <body data-theme="light">
 
@@ -95,20 +96,23 @@
   <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Scripts (load order matters) -->
-  <script src="js/config.js?v=p77" defer></script>
-  <script src="js/utils.js?v=p77" defer></script>
-  <script src="js/store.js?v=p77" defer></script>
-  <script src="js/api.js?v=p77" defer></script>
-  <script src="js/charts.js?v=p77" defer></script>
-  <script src="js/wallet.js?v=p77" defer></script>
-  <script src="js/ui-dashboard.js?v=p77" defer></script>
-  <script src="js/ui-list.js?v=p77" defer></script>
-  <script src="js/ui-modals.js?v=p77" defer></script>
-  <script src="js/ui-history.js?v=p77" defer></script>
-  <script src="js/ui-income.js?v=p77" defer></script>
-  <script src="js/ui-ai.js?v=p77" defer></script>
-  <script src="js/ui-report.js?v=p77" defer></script>
-  <script src="js/app.js?v=p77" defer></script>
+  <script src="js/config.js?v=p78" defer></script>
+  <script src="js/utils.js?v=p78" defer></script>
+  <script src="js/store.js?v=p78" defer></script>
+  <script src="js/cloud-config.js?v=p78" defer></script>
+  <script src="js/cloud.js?v=p78" defer></script>
+  <script src="js/api.js?v=p78" defer></script>
+  <script src="js/charts.js?v=p78" defer></script>
+  <script src="js/wallet.js?v=p78" defer></script>
+  <script src="js/ui-dashboard.js?v=p78" defer></script>
+  <script src="js/ui-list.js?v=p78" defer></script>
+  <script src="js/ui-modals.js?v=p78" defer></script>
+  <script src="js/ui-history.js?v=p78" defer></script>
+  <script src="js/ui-income.js?v=p78" defer></script>
+  <script src="js/ui-ai.js?v=p78" defer></script>
+  <script src="js/ui-report.js?v=p78" defer></script>
+  <script src="js/app.js?v=p78" defer></script>
 </body>
 </html>
+
 
